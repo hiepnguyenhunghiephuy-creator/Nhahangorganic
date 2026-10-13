@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhà hàng Organic — Quản lý vận hành</title>
+<meta name="description" content="Phần mềm quản lý nhà hàng khách tour: booking đoàn, đơn đoàn tự tính cost, kế hoạch nguyên liệu, bếp KDS, kiểm kê, báo cáo food cost.">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">O</div>
+      <div class="brand-text">
+        <strong>Nhà hàng Organic</strong>
+        <span>Quản lý vận hành</span>
+      </div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-foot">
+      <div class="sample-badge">SỐ LIỆU MẪU — cần thay bằng số thật của quán</div>
+      <div class="muted small">Phiên bản demo · Dữ liệu lưu trên trình duyệt</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn" id="menuToggle" aria-label="Mở menu">☰</button>
+      <div class="topbar-title">
+        <h1 id="pageTitle">Tổng quan</h1>
+        <p id="pageSub">Hôm nay · 3 đoàn · 400 khách</p>
+      </div>
+      <div class="topbar-actions">
+        <label class="role-select">
+          <span>Vai trò</span>
+          <select id="roleSelect">
+            <option value="owner">Chủ quán</option>
+            <option value="manager">Quản lý</option>
+            <option value="warehouse">Kho</option>
+            <option value="kitchen">Bếp</option>
+          </select>
+        </label>
+        <button class="btn btn-ghost" id="resetBtn">↺ Đặt lại dữ liệu mẫu</button>
+      </div>
+    </header>
+
+    <main class="content" id="view"></main>
+    <footer class="foot">Nhà hàng Organic · 07–09 Hồ Nghinh, Sơn Trà, Đà Nẵng · Bản demo nội bộ — không dùng số liệu thật.</footer>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" id="modal"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
