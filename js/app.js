@@ -269,7 +269,7 @@ function renderNav(){
 }
 function go(v){
   if(!ROLE_NAV[role].includes(v)) v=ROLE_NAV[role][0];
-  view=v; renderNav(); render(); $("#sidebar").classList.remove("open");
+  view=v; renderNav(); render(); $("#sidebar").classList.remove("open"); $("#sidebarBackdrop").hidden=true;
 }
 
 /* ================= RENDER: TỔNG QUAN ================= */
@@ -850,7 +850,13 @@ document.addEventListener("submit",e=>{
 /* ================= KHỞI TẠO ================= */
 $("#roleSelect").value=role;
 $("#roleSelect").addEventListener("change",e=>{ role=e.target.value; save(); go(view); });
-$("#menuToggle").addEventListener("click",()=>$("#sidebar").classList.toggle("open"));
+$("#menuToggle").addEventListener("click",()=>{
+  const open=$("#sidebar").classList.toggle("open");
+  $("#sidebarBackdrop").hidden=!open;
+});
+$("#sidebarBackdrop").addEventListener("click",()=>{
+  $("#sidebar").classList.remove("open"); $("#sidebarBackdrop").hidden=true;
+});
 $("#resetBtn").addEventListener("click",()=>{
   if(confirm("Đặt lại toàn bộ dữ liệu về dữ liệu mẫu?")){ localStorage.removeItem(KEY); S=seed(); save(); render(); toast("Đã đặt lại dữ liệu mẫu."); }
 });
