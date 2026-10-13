@@ -159,3 +159,49 @@ tbody tr:hover{background:#FDFBF6}
   .form-grid{grid-template-columns:1fr}
   .kpi .kpi-value{font-size:26px}
 }
+
+/* ===== Logo nhà hàng + backdrop sidebar ===== */
+.brand{flex-direction:column;align-items:flex-start;gap:8px}
+.brand-logo{display:block;height:42px;width:auto;max-width:100%;object-fit:contain}
+.sidebar-backdrop{position:fixed;inset:0;background:rgba(15,30,24,.5);z-index:35}
+.sidebar-backdrop[hidden]{display:none}
+@media (min-width:901px){ .sidebar-backdrop{display:none !important} }
+
+/* ===== Trải nghiệm điện thoại: không tràn ngang, nút bấm lớn, không tự zoom ===== */
+html,body{overflow-x:clip}
+img{max-width:100%}
+@media (max-width:768px){
+  /* Ô nhập đủ 16px để iOS không tự zoom khi chạm vào */
+  input,select,textarea{font-size:16px;padding:12px}
+  /* Vùng bấm tối thiểu ~44px */
+  .btn{min-height:44px;padding:12px 18px}
+  .btn-sm{min-height:44px;padding:10px 14px}
+  .nav button{min-height:44px;padding:13px 12px}
+  .tabs button{min-height:44px;padding:11px 16px}
+  .icon-btn{width:44px;height:44px}
+  td .btn{min-height:44px}
+  /* Bảng: cuộn ngang trong khung, có dấu hiệu cuộn + cuộn mượt */
+  .tblwrap{-webkit-overflow-scrolling:touch;scrollbar-width:thin;box-shadow:inset -14px 0 14px -14px rgba(12,59,46,.25)}
+  /* Modal dạng bottom-sheet, vừa màn hình */
+  .modal-backdrop{align-items:flex-end;padding:0}
+  .modal{border-radius:20px 20px 0 0;max-height:92dvh;width:100%;padding:20px 16px}
+  .toast{bottom:calc(16px + env(safe-area-inset-bottom, 0px));max-width:calc(100vw - 32px);text-align:center}
+  .topbar{flex-wrap:wrap}
+  .topbar-actions{width:100%}
+  .bom-row{flex-wrap:wrap}
+  .bom-row input{width:100%}
+  .bar-row .bar-label{width:92px}
+}
+@media (max-width:480px){
+  .reset-label{display:none}
+  .topbar{padding:12px 12px 8px;gap:10px}
+  .topbar-title h1{font-size:18px}
+  .content{padding:4px 12px 20px}
+  .card{padding:16px}
+  /* Bếp KDS: 1 cột, nút lớn */
+  .kds-grid{grid-template-columns:1fr}
+  .kds-card .kds-btn{min-height:48px;font-size:15px}
+  .btn-row .btn{flex:1 1 100%}
+  .modal{padding:18px 14px}
+  .brand-logo{height:36px}
+}
