@@ -368,18 +368,23 @@ function vOrders(){
   h+='</div>';
   return h;
 }
+/* Dòng chi phí từng món trong modal đơn đoàn: cost tổng = cost/khách × số khách.
+   Dùng chung cho cả lúc mở modal và lúc đổi số khách, để 2 thời điểm luôn khớp nhau. */
+function orderDishRows(set, guests){
+  return set.dishes.map(did=>{
+    const d=dish(did); if(!d) return "";
+    const per=dishCostPerPax(d);
+    return '<tr><td><strong>'+esc(d.name)+'</strong><div class="muted small">'+esc(d.cat)+'</div></td><td class="num">'+money(per)+'</td><td class="num">'+money(per*guests)+'</td></tr>';
+  }).join("");
+}
 function orderDetail(id){
   const b=booking(id); if(!b) return;
   const c=orderCalc(b); if(!c) return;
-  const rows=c.set.dishes.map(did=>{
-    const d=dish(did); if(!d) return "";
-    const per=dishCostPerPax(d);
-    return '<tr><td><strong>'+esc(d.name)+'</strong><div class="muted small">'+esc(d.cat)+'</div></td><td class="num">'+money(per)+'</td><td class="num">'+money(per*b.guests)+'</td></tr>';
-  }).join("");
+  const rows=orderDishRows(c.set, b.guests);
   openModal('<h3>Đơn đoàn — '+esc(b.name)+'</h3><p class="modal-sub">'+esc(c.set.name)+' · '+esc(b.time)+' · Đổi số khách để xem mọi con số tính lại ngay.</p>'
     +'<label>Số khách</label><div style="display:flex;gap:10px;align-items:center"><input id="orderGuests" type="number" min="1" value="'+b.guests+'" style="max-width:150px"><span class="muted">khách</span></div>'
     +'<div id="orderCalcBox" style="margin-top:14px"></div>'
-    +'<div class="tblwrap" style="margin-top:12px;max-height:260px;overflow:auto"><table><thead><tr><th>Món</th><th class="num">Cost / khách</th><th class="num">Cost tổng</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="tblwrap" style="margin-top:12px;max-height:260px;overflow:auto"><table><thead><tr><th>Món</th><th class="num">Cost / khách</th><th class="num">Cost tổng</th></tr></thead><tbody id="orderDishRows">'+rows+'</tbody></table></div>'
     +'<div class="btn-row"><button class="btn btn-ghost" data-act="close-modal">Đóng</button><button class="btn btn-primary" data-act="save-guests" data-id="'+b.id+'">Lưu số khách mới</button></div>');
   updateOrderCalcBox(b.id);
 }
@@ -393,6 +398,9 @@ function updateOrderCalcBox(id){
   box.innerHTML='<div class="grid grid-3" style="gap:10px"><div class="card" style="padding:12px"><div class="muted small">Doanh thu</div><strong>'+money(c.revenue)+'</strong></div>'
     +'<div class="card" style="padding:12px"><div class="muted small">Chi phí NL</div><strong>'+money(c.cost)+'</strong></div>'
     +'<div class="card" style="padding:12px"><div class="muted small">Food cost / Lợi nhuận</div><strong>'+pct(c.foodCost*100)+'</strong> · <strong style="color:var(--green)">'+money(c.profit)+'</strong></div></div>';
+  // Tính lại cả các dòng chi phí từng món theo số khách mới (cùng công thức với lúc mở modal).
+  const rowsEl=$("#orderDishRows");
+  if(rowsEl) rowsEl.innerHTML=orderDishRows(c.set, g);
 }
 
 /* ================= RENDER: KẾ HOẠCH MUA ================= */
