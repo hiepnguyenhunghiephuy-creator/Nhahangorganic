@@ -53,3 +53,6 @@ js/app.js       Dữ liệu mẫu + tính toán (BOM, cost, food cost) + render 
   nhập–xuất–tồn, top hao hụt, biến động giá theo NCC.
 - **Danh mục:** món, BOM, nguyên liệu, NCC, bàn — thêm/sửa/xóa trong app.
 - **Phân quyền xem thử:** Chủ quán / Quản lý / Kho / Bếp (menu rút gọn).
+
+## Logo
+Logo chính thức của nhà hàng (lấy từ website organicrestaurant.vn, 283×80, nền trong suốt) được nhúng trực tiếp vào `index.html` dạng data URI ở header, cùng favicon là logo trên nền xanh đậm để hiển thị rõ trên tab trình duyệt. (Không dùng file ảnh rời vì GitHub API qua công cụ này không giữ nguyên byte file nhị phân.)
