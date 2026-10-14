@@ -52,7 +52,17 @@ js/app.js       Dữ liệu mẫu + tính toán (BOM, cost, food cost) + render 
 - **Báo cáo:** food cost theo đoàn / set / khách, thực tế vs định mức,
   nhập–xuất–tồn, top hao hụt, biến động giá theo NCC.
 - **Danh mục:** món, BOM, nguyên liệu, NCC, bàn — thêm/sửa/xóa trong app.
-- **Phân quyền xem thử:** Chủ quán / Quản lý / Kho / Bếp (menu rút gọn).
+- **Phân quyền xem thử:** Chủ quán / Quản lý / Kho / Bếp (menu rút gọn + chặn thao tác theo vai trò ở mức code, ẩn số tiền nhạy cảm với Kho/Bếp, nhật ký thao tác ở Tổng quan).
+
+## Quy tắc tính toán (khóa sau đợt sửa P0, 14/10/2026)
+
+- **Một nguồn sự thật cho cost:** tổng đoàn = tổng các dòng món (mỗi dòng làm tròn đồng chẵn rồi cộng). Không còn 2 công thức song song.
+- **Giá vốn bình quân gia quyền:** nhập kho → tồn += số nhập; giá vốn = (tồn cũ × giá cũ + nhập × giá nhập) / tổng tồn. Cột "Giá mới nhất" trong báo cáo biến động = giá lần nhập gần nhất, có thể khác giá vốn bình quân.
+- **Tồn lý thuyết (một định nghĩa mọi màn hình):** = Tồn hiện tại (đã gồm hàng nhập hôm nay) − Xuất (tiêu hao hôm nay). Nhu cầu vượt tồn hiện riêng ở cột "Thiếu", không hiển thị tồn âm.
+- **Cọc = 30% doanh thu hiện tại**, tự tính lại khi đổi số khách / đổi set. "Còn thiếu cọc" (phần cọc chưa đủ) khác "Còn phải thu" (tiền ăn còn lại).
+- **Kiểm kê:** ô tồn thực tế để trống khi chưa đếm; Lưu phiếu kiểm kê chốt tồn kho theo số đã đếm và lưu phiếu để xem lại; lưu kiểm kê KHÔNG đổi giá.
+- **Thu tiền:** mỗi đoàn lưu danh sách các lần thu (ngày giờ, tiền mặt/chuyển khoản, ghi chú, người ghi); không ghi khoản 0đ; sửa/xóa có xác nhận.
+- **Vai trò là công tắc demo, chưa phải tài khoản thật:** ô "Vai trò" ở topbar chỉ đổi góc nhìn trong trình duyệt này, ai cũng đổi được. Tài khoản + mật khẩu + phân quyền thật cần backend (bước tiếp theo khi đưa vào vận hành thật).
 
 ## Logo
 Logo chính thức của nhà hàng (lấy từ website organicrestaurant.vn, 283×80, nền trong suốt) được nhúng trực tiếp vào `index.html` dạng data URI ở header, cùng favicon là logo trên nền xanh đậm để hiển thị rõ trên tab trình duyệt. (Không dùng file ảnh rời vì GitHub API qua công cụ này không giữ nguyên byte file nhị phân.)
