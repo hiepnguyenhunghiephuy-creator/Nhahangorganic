@@ -146,6 +146,14 @@ Object.keys(S.payments).forEach(k=>{
 });
 if(!Array.isArray(S.counts)) S.counts=[];
 let role = localStorage.getItem(KEY+"-role") || "owner";
+/* Di dời 1 lần: phiếu kiểm kê bản cũ lưu sẵn số đếm (actual khác null) nên
+   trình duyệt cũ vẫn hiện số "ma" và Lưu chốt cả phiếu. Xóa số đếm cũ,
+   đánh dấu đã di dời và ghi ngay để lần load sau không chạy lại. */
+if(!S.countsMigrated){
+  S.counts.forEach(c=>{ c.actual=null; c.note=""; });
+  S.countsMigrated=true;
+  save();
+}
 let view = "dashboard";
 let catalogTab = "dishes";
 let selectedOrderId = null;
@@ -163,6 +171,15 @@ const round0 = n => Math.round(+n||0); // làm tròn đồng chẵn
 const num = (n,d) => (Math.round(n*100)/100).toLocaleString("vi-VN",{maximumFractionDigits:d==null?2:d});
 const pct = n => (Math.round(n*10)/10).toLocaleString("vi-VN")+"%";
 const byId = (arr,id) => arr.find(x=>x.id===id);
+/* Tên set hiển thị cho vai không thấy tiền: tên set gốc chứa giá ("Suất 200.000đ")
+   nên phải lược bỏ phần giá; set "Suất" trơ trụi thì kèm số món để phân biệt. */
+function setLabel(set, hideMoney){
+  if(!set) return "";
+  if(!hideMoney) return set.name;
+  const stripped=set.name.replace(/\d[\d.]*\s*đ/g,"").replace(/\s{2,}/g," ").trim();
+  if(stripped==="Suất") return "Suất · "+set.dishes.length+" món";
+  return stripped || set.name;
+}
 const ing = id => byId(S.ingredients,id);
 const dish = id => byId(S.dishes,id);
 const setOf = id => byId(S.sets,id);
@@ -308,7 +325,7 @@ const CAN={
   manager:["*"],
   warehouse:["dashboard","purchase","receiving","count","catalog","close-modal","go-receiving",
     "new-receipt","add-receipt-line","add-count","save-count","count-input","count-note",
-    "new-ing","edit-ing","del-ing","new-sup","edit-sup","del-sup"],
+    "new-sup","edit-sup","del-sup"],
   kitchen:["dashboard","orders","kds","close-modal","kds-goto","order-detail","kds-next"]
 };
 function canAct(act){ const list=CAN[role]||[]; return list.includes("*")||list.includes(act); }
@@ -330,7 +347,9 @@ function refreshHeader(){
   $("#pageTitle").textContent=t[0];
   if(view==="dashboard"){
     const st=todayStats();
-    $("#pageSub").textContent="Hôm nay · "+S.bookings.length+" đoàn · "+st.guests.toLocaleString("vi-VN")+" khách · "+money(st.revenue);
+    /* Kho/Bếp không thấy doanh thu ở tiêu đề. */
+    const hideMoney=(role==="warehouse"||role==="kitchen");
+    $("#pageSub").textContent="Hôm nay · "+S.bookings.length+" đoàn · "+st.guests.toLocaleString("vi-VN")+" khách"+(hideMoney?"":" · "+money(st.revenue));
   } else $("#pageSub").textContent=t[1];
 }
 function renderNav(){
@@ -369,7 +388,7 @@ function vDashboard(){
     const req=depositRequired(b);
     const remain=depositShort(b);
     h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><h3>'+esc(b.name)+'</h3><span class="chip chip-blue">'+esc(b.time)+'</span></div>'
-      +'<p class="muted small">'+esc(b.guests)+' khách · '+esc(c.set.name)+(!hideMoney?' · '+money(c.set.price)+'/khách':'')+'</p>';
+      +'<p class="muted small">'+esc(b.guests)+' khách · '+esc(setLabel(c.set,hideMoney))+(!hideMoney?' · '+money(c.set.price)+'/khách':'')+'</p>';
     if(!hideMoney){
       h+='<p><strong>Doanh thu:</strong> '+money(c.revenue)+' · <strong>Food cost:</strong> '+pct(c.foodCost*100)+'</p>'
       +'<p><strong>Cọc:</strong> '+money(b.depositPaid)+' / '+money(req)+(remain>0?' · <span style="color:var(--red)">còn thiếu cọc '+money(remain)+'</span>':' · <span style="color:var(--green)">đủ cọc</span>')+'</p>';
@@ -454,17 +473,19 @@ function bookingForm(b){
 
 /* ================= RENDER: ĐƠN ĐOÀN ================= */
 function vOrders(){
+  /* Bếp xem đơn đoàn để biết nấu gì — không thấy tiền (giá suất, doanh thu, cost, lãi, food cost). */
+  const hideMoney=(role==="warehouse"||role==="kitchen");
   let h='<div class="note">Đơn đoàn được tạo từ booking. <strong>Đổi số khách</strong> là toàn bộ định mức BOM, chi phí nguyên liệu, doanh thu, food cost và lợi nhuận tính lại ngay lập tức.</div>';
   h+='<div class="grid grid-2" style="margin-top:16px">';
   S.bookings.forEach(b=>{
     const c=orderCalc(b); if(!c) return;
     h+='<div class="card"><div style="display:flex;justify-content:space-between;gap:8px"><h3>'+esc(b.name)+'</h3><span class="chip chip-blue">'+esc(b.time)+'</span></div>'
-      +'<p class="muted small">'+esc(c.set.name)+' · '+money(c.set.price)+'/khách</p>'
-      +'<div class="grid grid-3" style="gap:10px;margin:12px 0">'
+      +'<p class="muted small">'+esc(setLabel(c.set,hideMoney))+(hideMoney?'':' · '+money(c.set.price)+'/khách')+'</p>'
+      +(hideMoney?'':'<div class="grid grid-3" style="gap:10px;margin:12px 0">'
       +'<div><div class="muted small">Doanh thu</div><strong>'+money(c.revenue)+'</strong></div>'
       +'<div><div class="muted small">Chi phí NL</div><strong>'+money(c.cost)+'</strong></div>'
       +'<div><div class="muted small">Lợi nhuận</div><strong style="color:var(--green)">'+money(c.profit)+'</strong></div></div>'
-      +'<div class="kpi" style="background:var(--emerald-soft);border-radius:12px;padding:12px 14px"><div class="kpi-label">Food cost</div><div class="kpi-value" style="font-size:26px">'+pct(c.foodCost*100)+'</div><div class="kpi-hint">Chi phí NL / khách: '+money(c.costPerPax)+'</div></div>'
+      +'<div class="kpi" style="background:var(--emerald-soft);border-radius:12px;padding:12px 14px"><div class="kpi-label">Food cost</div><div class="kpi-value" style="font-size:26px">'+pct(c.foodCost*100)+'</div><div class="kpi-hint">Chi phí NL / khách: '+money(c.costPerPax)+'</div></div>')
       +'<div class="btn-row"><button class="btn btn-primary btn-sm" data-act="order-detail" data-id="'+b.id+'">Chi tiết & đổi số khách</button>'
       +'<button class="btn btn-ghost btn-sm" data-act="kds-goto" data-id="'+b.id+'">→ Xem bếp</button></div></div>';
   });
@@ -483,14 +504,15 @@ function orderDetail(id){
   const c=orderCalc(b); if(!c) return;
   selectedOrderId=id;
   const editable=canAct("save-guests");
-  const rows=orderDishRows(c);
-  openModal('<h3>Đơn đoàn — '+esc(b.name)+'</h3><p class="modal-sub">'+esc(c.set.name)+' · '+esc(b.time)+' · Đổi số khách để xem mọi con số tính lại ngay.</p>'
+  /* Bếp chỉ xem tên món + số khách — không thấy tiền (hộp tổng + cột cost). */
+  const rows=editable?orderDishRows(c):c.lines.map(l=>'<tr><td><strong>'+esc(l.dish.name)+'</strong><div class="muted small">'+esc(l.dish.cat)+'</div></td></tr>').join("");
+  openModal('<h3>Đơn đoàn — '+esc(b.name)+'</h3><p class="modal-sub">'+esc(setLabel(c.set,!editable))+' · '+esc(b.time)+(editable?' · Đổi số khách để xem mọi con số tính lại ngay.':'')+'</p>'
     +'<label>Số khách</label><div style="display:flex;gap:10px;align-items:center"><input id="orderGuests" type="number" min="1" value="'+b.guests+'" style="max-width:150px"'+(editable?"":" disabled")+'> <span class="muted">khách</span></div>'
     +(editable?"":'<p class="muted small">Chế độ chỉ xem — vai '+esc(ROLE_NAMES[role])+' không được đổi số khách.</p>')
-    +'<div id="orderCalcBox" style="margin-top:14px"></div>'
-    +'<div class="tblwrap" style="margin-top:12px;max-height:260px;overflow:auto"><table><thead><tr><th>Món</th><th class="num">Cost / khách</th><th class="num">Cost tổng</th></tr></thead><tbody id="orderDishRows">'+rows+'</tbody></table></div>'
+    +(editable?'<div id="orderCalcBox" style="margin-top:14px"></div>':'')
+    +'<div class="tblwrap" style="margin-top:12px;max-height:260px;overflow:auto"><table><thead><tr><th>Món</th>'+(editable?'<th class="num">Cost / khách</th><th class="num">Cost tổng</th>':'')+'</tr></thead><tbody id="orderDishRows">'+rows+'</tbody></table></div>'
     +'<div class="btn-row"><button class="btn btn-ghost" data-act="close-modal">Đóng</button>'+(editable?'<button class="btn btn-primary" data-act="save-guests" data-id="'+b.id+'">Lưu số khách mới</button>':'')+'</div>');
-  updateOrderCalcBox(b.id);
+  if(editable) updateOrderCalcBox(b.id);
 }
 function updateOrderCalcBox(id){
   const b=booking(id); if(!b) return;
@@ -509,6 +531,8 @@ function updateOrderCalcBox(id){
 
 /* ================= RENDER: KẾ HOẠCH MUA ================= */
 function vPurchase(){
+  /* Kho chỉ cần biết MUA GÌ + BAO NHIÊU — không thấy tiền (giá vốn, thành tiền, tổng tiền). */
+  const hideMoney=(role==="warehouse");
   const needs=dayNeeds();
   // gom theo NCC
   const bySup={};
@@ -525,15 +549,15 @@ function vPurchase(){
     const sup=supplier(supId);
     const items=bySup[supId];
     const sub=items.reduce((s,x)=>s+x.toBuy*x.g.price,0); total+=sub;
-    h+='<div class="section-head"><div><h2>'+esc(sup?.name||"NCC")+'</h2><p>'+esc(sup?.phone||"")+' · '+esc(sup?.note||"")+'</p></div><strong>'+money(sub)+'</strong></div>';
-    h+='<div class="card"><div class="tblwrap"><table><thead><tr><th>Nguyên liệu</th><th class="num">Cần cho hôm nay</th><th class="num">Tồn kho</th><th class="num">Cần mua</th><th class="num">Giá vốn bình quân</th><th class="num">Thành tiền</th></tr></thead><tbody>';
+    h+='<div class="section-head"><div><h2>'+esc(sup?.name||"NCC")+'</h2><p>'+esc(sup?.phone||"")+' · '+esc(sup?.note||"")+'</p></div>'+(hideMoney?"":'<strong>'+money(sub)+'</strong>')+'</div>';
+    h+='<div class="card"><div class="tblwrap"><table><thead><tr><th>Nguyên liệu</th><th class="num">Cần cho hôm nay</th><th class="num">Tồn kho</th><th class="num">Cần mua</th>'+(hideMoney?'':'<th class="num">Giá vốn bình quân</th><th class="num">Thành tiền</th>')+'</tr></thead><tbody>';
     items.forEach(({g,need,toBuy})=>{
-      h+='<tr><td><strong>'+esc(g.name)+'</strong></td><td class="num">'+num(need)+' '+esc(g.unit)+'</td><td class="num">'+num(g.stock)+' '+esc(g.unit)+'</td><td class="num"><strong>'+num(toBuy)+' '+esc(g.unit)+'</strong></td><td class="num">'+money(g.price)+'/'+esc(g.unit)+'</td><td class="num">'+money(toBuy*g.price)+'</td></tr>';
+      h+='<tr><td><strong>'+esc(g.name)+'</strong></td><td class="num">'+num(need)+' '+esc(g.unit)+'</td><td class="num">'+num(g.stock)+' '+esc(g.unit)+'</td><td class="num"><strong>'+num(toBuy)+' '+esc(g.unit)+'</strong></td>'+(hideMoney?'':'<td class="num">'+money(g.price)+'/'+esc(g.unit)+'</td><td class="num">'+money(toBuy*g.price)+'</td>')+'</tr>';
     });
     h+='</tbody></table></div></div>';
   });
   if(!Object.keys(bySup).length) h+='<div class="card empty">Tồn kho đủ cho tất cả đoàn hôm nay — không cần mua thêm.</div>';
-  else h+='<div class="card" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><div><strong>Tổng dự kiến mua:</strong> <span style="font-size:20px">'+money(total)+'</span></div><button class="btn btn-gold" data-act="go-receiving">→ Sang nhập kho</button></div>';
+  else h+='<div class="card" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'+(hideMoney?'':'<div><strong>Tổng dự kiến mua:</strong> <span style="font-size:20px">'+money(total)+'</span></div>')+'<button class="btn btn-gold" data-act="go-receiving">→ Sang nhập kho</button></div>';
   return h;
 }
 
@@ -668,9 +692,15 @@ function countDiffCells(ct){
     color
   };
 }
+/* Trạng thái đếm của 1 dòng kiểm kê: rõ ràng dòng nào đã đếm / chưa đếm. */
+function countStatusHtml(ct){
+  return ct.actual==null
+    ? '<span class="muted">○ Chưa đếm</span>'
+    : '<span style="color:var(--green)">✓ Đã đếm</span>';
+}
 function vCount(){
-  let h='<div class="note">Nhập tồn thực tế đếm được cuối ngày — hệ thống tự so với tồn lý thuyết và báo chênh lệch ngay.<br><strong>Tồn lý thuyết = Tồn hiện tại (đã gồm hàng nhập hôm nay) − Xuất</strong> (cùng định nghĩa ở mọi màn hình). Khi nhu cầu vượt tồn, phần thiếu hiện riêng ở cột "Thiếu", tồn hiển thị tối thiểu 0 — không còn tồn âm. Bấm <strong>Lưu phiếu kiểm kê</strong> để chốt tồn kho theo số đã đếm.</div>';
-  h+='<div class="card" style="margin-top:16px"><div class="tblwrap"><table><thead><tr><th>Nguyên liệu</th><th class="num">Tồn lý thuyết</th><th class="num">Thiếu</th><th class="num">Tồn thực tế</th><th class="num">Chênh lệch</th><th class="num">Giá trị chênh lệch</th><th>Ghi chú</th></tr></thead><tbody>';
+  let h='<div class="note">Nhập tồn thực tế đếm được cuối ngày — hệ thống tự so với tồn lý thuyết và báo chênh lệch ngay.<br><strong>Tồn lý thuyết = Tồn hiện tại (đã gồm hàng nhập hôm nay) − Xuất</strong> (cùng định nghĩa ở mọi màn hình). Khi nhu cầu vượt tồn, phần thiếu hiện riêng ở cột "Thiếu", tồn hiển thị tối thiểu 0 — không còn tồn âm. Ô Tồn thực tế để trống = chưa đếm. Bấm <strong>Lưu phiếu kiểm kê</strong> để chỉ chốt các dòng đã đếm.</div>';
+  h+='<div class="card" style="margin-top:16px"><div class="tblwrap"><table><thead><tr><th>Nguyên liệu</th><th class="num">Tồn lý thuyết</th><th class="num">Thiếu</th><th class="num">Tồn thực tế</th><th>Trạng thái</th><th class="num">Chênh lệch</th><th class="num">Giá trị chênh lệch</th><th>Ghi chú</th></tr></thead><tbody>';
   S.counts.forEach((ct,idx)=>{
     const g=ing(ct.ing); if(!g) return;
     const th=theoretical(ct.ing);
@@ -680,6 +710,7 @@ function vCount(){
       +'<td class="num">'+num(th)+' '+esc(g.unit)+'</td>'
       +'<td class="num" style="color:'+(sh>0?'var(--red)':'inherit')+'">'+(sh>0?num(sh)+' '+esc(g.unit):'—')+'</td>'
       +'<td class="num"><input type="number" step="0.01" min="0" value="'+(ct.actual==null?"":String(round2(ct.actual)))+'" data-act="count-input" data-idx="'+idx+'" placeholder="Chưa đếm" style="width:110px;text-align:right"></td>'
+      +'<td class="count-status">'+countStatusHtml(ct)+'</td>'
       +'<td class="num count-diff" style="color:'+cells.color+'">'+cells.diffHtml+'</td>'
       +'<td class="num count-val" style="color:'+cells.color+'">'+cells.valHtml+'</td>'
       +'<td><input type="text" value="'+esc(ct.note||"")+'" data-act="count-note" data-idx="'+idx+'" placeholder="Ghi chú"></td></tr>';
@@ -791,10 +822,13 @@ function vCatalog(){
     h+='</tbody></table></div></div>';
   }
   if(catalogTab==="ingredients"){
-    h+='<div class="btn-row" style="margin-top:0"><button class="btn btn-primary" data-act="new-ing">+ Thêm nguyên liệu</button></div>';
-    h+='<div class="card" style="margin-top:14px"><div class="tblwrap"><table><thead><tr><th>Nguyên liệu</th><th>Loại</th><th>Đơn vị</th><th class="num">Giá vốn bình quân</th><th class="num">Tồn kho</th><th class="num">Mức tối thiểu</th><th>NCC</th><th></th></tr></thead><tbody>';
+    /* Kho/Bếp không thấy cột giá vốn, không thêm/sửa/xóa nguyên liệu (chặn cả ở mức code qua CAN). */
+    const hideMoney=(role==="warehouse"||role==="kitchen");
+    const canEditIng=canAct("edit-ing");
+    h+=(canEditIng?'<div class="btn-row" style="margin-top:0"><button class="btn btn-primary" data-act="new-ing">+ Thêm nguyên liệu</button></div>':'');
+    h+='<div class="card" style="margin-top:14px"><div class="tblwrap"><table><thead><tr><th>Nguyên liệu</th><th>Loại</th><th>Đơn vị</th>'+(hideMoney?'':'<th class="num">Giá vốn bình quân</th>')+'<th class="num">Tồn kho</th><th class="num">Mức tối thiểu</th><th>NCC</th>'+(canEditIng?'<th></th>':'')+'</tr></thead><tbody>';
     S.ingredients.forEach(g=>{
-      h+='<tr><td><strong>'+esc(g.name)+'</strong></td><td>'+esc(CATS[g.cat]||g.cat)+'</td><td>'+esc(g.unit)+'</td><td class="num">'+money(g.price)+'</td><td class="num" style="color:'+(g.stock<g.min?'var(--red)':'inherit')+'">'+num(g.stock)+'</td><td class="num">'+num(g.min)+'</td><td>'+esc(supplier(g.supplier)?.name||"")+'</td><td><button class="btn btn-ghost btn-sm" data-act="edit-ing" data-id="'+g.id+'">Sửa</button> <button class="btn btn-ghost btn-sm" data-act="del-ing" data-id="'+g.id+'">Xóa</button></td></tr>';
+      h+='<tr><td><strong>'+esc(g.name)+'</strong></td><td>'+esc(CATS[g.cat]||g.cat)+'</td><td>'+esc(g.unit)+'</td>'+(hideMoney?'':'<td class="num">'+money(g.price)+'</td>')+'<td class="num" style="color:'+(g.stock<g.min?'var(--red)':'inherit')+'">'+num(g.stock)+'</td><td class="num">'+num(g.min)+'</td><td>'+esc(supplier(g.supplier)?.name||"")+'</td>'+(canEditIng?'<td><button class="btn btn-ghost btn-sm" data-act="edit-ing" data-id="'+g.id+'">Sửa</button> <button class="btn btn-ghost btn-sm" data-act="del-ing" data-id="'+g.id+'">Xóa</button></td>':'')+'</tr>';
     });
     h+='</tbody></table></div></div>';
   }
@@ -988,6 +1022,8 @@ document.addEventListener("input",e=>{
       const diffEl=row.querySelector(".count-diff"), valEl=row.querySelector(".count-val");
       if(diffEl){ diffEl.innerHTML=cells.diffHtml; diffEl.style.color=cells.color; }
       if(valEl){ valEl.innerHTML=cells.valHtml; valEl.style.color=cells.color; }
+      const stEl=row.querySelector(".count-status");
+      if(stEl) stEl.innerHTML=countStatusHtml(S.counts[idx]);
     }
     const totalVar=S.counts.reduce((s,ct)=>{ const g=ing(ct.ing); if(!g||ct.actual==null) return s; return s+round0(round2(ct.actual-theoretical(ct.ing))*g.price); },0);
     const totEl=$("#countTotal");
